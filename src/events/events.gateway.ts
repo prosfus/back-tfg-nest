@@ -19,12 +19,12 @@ export class EventsGateway
 
   constructor(private readonly userService: UserService) {}
 
-  afterInit(_server: Server) {
+  afterInit() {
     console.log('WebSocket Initialized!');
   }
 
   handleConnection(client: Socket) {
-    console.log('Client connected:', client.id);
+    console.log('Client connected: ', client.id);
   }
 
   handleDisconnect(client: Socket) {
@@ -39,6 +39,7 @@ export class EventsGateway
   @SubscribeMessage('hello')
   handleMessage(client: Socket, data: { name: string; id: string }): string {
     this.userService.addUser({ name: data.name, id: client.id });
+    console.log('Client connected as: ', data.name);
     this.emitConnectedUsers();
     client.emit('me', client.id);
     return client.id;
