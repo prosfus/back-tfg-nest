@@ -8,6 +8,7 @@ import {
 } from '@nestjs/websockets';
 import { Server } from 'socket.io';
 import { Socket } from 'socket.io-client';
+import { CallsService } from 'src/services/calls.service';
 import { UserService } from 'src/services/users.service';
 
 @WebSocketGateway({ cors: true })
@@ -17,7 +18,10 @@ export class EventsGateway
   @WebSocketServer()
   server: Server;
 
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    private readonly userService: UserService,
+    private readonly callsService: CallsService,
+  ) {}
 
   afterInit() {
     console.log('WebSocket Initialized!');
@@ -45,25 +49,51 @@ export class EventsGateway
     return client.id;
   }
 
+  @SubscribeMessage('createCall')
+  createCall(
+    client: Socket,
+    data: { creatorId: string; userToCallId: string },
+  ) {
+    //Create a new call
+    const call = this.callsService.createCall(data.creatorId);
+
+    //Call the user
+    this.handleCallUser(client, {
+      userToCallId: data.userToCallId,
+      callerId: data.creatorId,
+      callId: call.callId,
+    });
+
+    client.emit('createCall', call);
+  }
+
   @SubscribeMessage('callUser')
   handleCallUser(
     client: Socket,
-    data: { userToCall: string; signalData: any; from: string; name: string },
+    data: { userToCallId: string; callerId: string; callId: string },
   ) {
-    this.server.to(data.userToCall).emit('callUser', {
-      signal: data.signalData,
-      from: data.from,
-      name: data.name,
+    const call = this.callsService.findCall(data.callId);
+    const caller = this.userService.getUser(data.callerId);
+    const userToCall = this.userService.getUser(data.userToCallId);
+
+    console.log(`${caller?.id} calling ${userToCall?.id}`);
+
+    this.server.to([...call.userIds, userToCall.id]).emit('callNotification', {
+      callId: data.callId,
+      caller,
+      userToCall,
     });
   }
 
   @SubscribeMessage('answerCall')
-  handleAnswerCall(client: Socket, data: { signal: any; to: string }) {
-    this.server.to(data.to).emit('callAccepted', data.signal);
+  handleAnswerCall(client: Socket, data: { callId: string }) {
+    const call = this.callsService.addUserToCall(data.callId, client.id);
+    this.server.to([...call.userIds]).emit('callUpdate', call);
   }
 
   @SubscribeMessage('hangupCall')
-  handleCloseCall(client: Socket, data: { to: string }) {
-    this.server.to(data.to).emit('callEnded', { connectionId: data.to });
+  handleCloseCall(client: Socket, data: { callId: string }) {
+    const call = this.callsService.addUserToCall(data.callId, client.id);
+    this.server.to([...call.userIds]).emit('callRejected', { user: client.id });
   }
 }
