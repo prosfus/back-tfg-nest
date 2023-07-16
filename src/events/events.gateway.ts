@@ -85,13 +85,19 @@ export class EventsGateway
     });
   }
 
+  @SubscribeMessage('hangupCall')
+  handleHangupCall(client: Socket, data: { callId: string }) {
+    const call = this.callsService.removeUserFromCall(data.callId, client.id);
+    this.server.to([...call.userIds]).emit('callUpdate', call);
+  }
+
   @SubscribeMessage('answerCall')
   handleAnswerCall(client: Socket, data: { callId: string }) {
     const call = this.callsService.addUserToCall(data.callId, client.id);
     this.server.to([...call.userIds]).emit('callUpdate', call);
   }
 
-  @SubscribeMessage('hangupCall')
+  @SubscribeMessage('rejectCall')
   handleCloseCall(client: Socket, data: { callId: string }) {
     const call = this.callsService.addUserToCall(data.callId, client.id);
     this.server.to([...call.userIds]).emit('callRejected', { user: client.id });
