@@ -39,7 +39,7 @@ export class CallsService {
   removeUserFromCall(callId: string, userId: string) {
     const callToChange = this.findCall(callId);
 
-    callToChange.userIds = callToChange.userIds.filter((id) => id !== userId);
+    callToChange.userIds = callToChange.userIds?.filter((id) => id !== userId);
     this.updateCall(callToChange);
     return callToChange;
   }
