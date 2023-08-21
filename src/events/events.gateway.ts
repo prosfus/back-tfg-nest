@@ -87,8 +87,16 @@ export class EventsGateway
 
   @SubscribeMessage('hangupCall')
   handleHangupCall(client: Socket, data: { callId: string }) {
-    const call = this.callsService.removeUserFromCall(data.callId, client.id);
-    this.server.to([...call.userIds]).emit('callUpdate', call);
+    const oldCall = this.callsService.findCall(data.callId);
+    const updatedCall = this.callsService.removeUserFromCall(
+      data.callId,
+      client.id,
+    );
+    if (updatedCall) {
+      this.server.to([...updatedCall.userIds]).emit('callUpdate', updatedCall);
+    } else {
+      this.server.to([...oldCall.userIds]).emit('callEnd', data.callId);
+    }
   }
 
   @SubscribeMessage('answerCall')

@@ -24,6 +24,10 @@ export class CallsService {
     return call;
   }
 
+  deleteCall(callId: string) {
+    this.calls = this.calls.filter((call) => call.callId !== callId);
+  }
+
   addUserToCall(callId: string, userId: string) {
     const callToChange = this.findCall(callId);
 
@@ -40,6 +44,11 @@ export class CallsService {
     const callToChange = this.findCall(callId);
 
     callToChange.userIds = callToChange.userIds?.filter((id) => id !== userId);
+    if (callToChange.userIds.length <= 1) {
+      console.log('Deleting call');
+      this.deleteCall(callId);
+      return undefined;
+    }
     this.updateCall(callToChange);
     return callToChange;
   }
