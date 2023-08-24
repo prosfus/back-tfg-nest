@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Server } from 'socket.io';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface Call {
@@ -51,6 +52,16 @@ export class CallsService {
     }
     this.updateCall(callToChange);
     return callToChange;
+  }
+
+  removeUserFromAnyCall(userId: string, server?: Server) {
+    const call = this.calls.find((call) => call.userIds.includes(userId));
+    if (call) {
+      const newCall = this.removeUserFromCall(call.callId, userId);
+      if (server) {
+        server.to([...newCall.userIds]).emit('callUpdate', newCall);
+      }
+    }
   }
 
   getAllCalls() {

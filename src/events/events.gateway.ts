@@ -33,6 +33,7 @@ export class EventsGateway
 
   handleDisconnect(client: Socket) {
     this.userService.removeUser(client.id);
+    this.callsService.removeUserFromAnyCall(client.id, this.server);
     this.emitConnectedUsers();
   }
 
